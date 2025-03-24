@@ -7,7 +7,7 @@
 """
 
 # 默认放大倍数
-DEFAULT_SCALE = 1.1
+DEFAULT_SCALE = 1.05
 
 # 默认对齐方式
 # 可选值:
@@ -17,7 +17,7 @@ DEFAULT_SCALE = 1.1
 # - 'center': 居中对齐
 # - 'left_top': 左上角对齐
 # - 'right_top': 右上角对齐
-DEFAULT_ALIGN_MODE = 'random_bottom'
+DEFAULT_ALIGN_MODE = 'center'
 
 # 默认马赛克方块大小
 DEFAULT_MOSAIC_BLOCK_SIZE = 15
@@ -67,6 +67,7 @@ DEFAULT_WATERMARK_ENABLED = False       # 隐形水印
 DEFAULT_EDGE_ENABLED = False            # 边缘调整
 DEFAULT_COLOR_ENABLED = False           # 色彩空间调整
 DEFAULT_PERSPECTIVE_ENABLED = False     # 透视变换
+DEFAULT_DUST_SCRATCH_ENABLED = False    # 蒙尘与划痕效果
 
 # 各效果默认参数
 DEFAULT_NOISE_STRENGTH = 0.03           # 噪点强度 (0.01-0.05)
@@ -76,6 +77,9 @@ DEFAULT_WATERMARK_STRENGTH = 0.02       # 水印强度 (0.01-0.05)
 DEFAULT_EDGE_STRENGTHEN = True          # 是否增强边缘 (True/False)
 DEFAULT_EDGE_AMOUNT = 0.3               # 边缘调整量 (0.2-0.5)
 DEFAULT_PERSPECTIVE_STRENGTH = 0.01     # 透视变换强度 (0.005-0.02)
+DEFAULT_DUST_AMOUNT = 0.2               # 蒙尘量 (0.1-0.4)
+DEFAULT_SCRATCH_AMOUNT = 0.1            # 划痕量 (0.05-0.3)
+DEFAULT_DUST_SCRATCH_FREQUENCY = 0.15   # 效果出现频率 (0.1-0.5)
 
 # 随机效果数量（当使用随机效果组合时）
 DEFAULT_RANDOM_EFFECTS_COUNT = 3
@@ -112,6 +116,12 @@ USER_CONFIG = {
     # "noise_enabled": True,
     # "texture_enabled": True,
     # "noise_strength": 0.02,
+    
+    # 示例：启用蒙尘与划痕效果
+    # "dust_scratch_enabled": True,
+    # "dust_amount": 0.25,
+    # "scratch_amount": 0.15,
+    # "dust_scratch_frequency": 0.2,
     
     # 示例：修改日志设置
     # "log_to_file": True,        # 启用日志文件输出
@@ -189,6 +199,9 @@ if "color_enabled" in USER_CONFIG:
 if "perspective_enabled" in USER_CONFIG:
     DEFAULT_PERSPECTIVE_ENABLED = USER_CONFIG["perspective_enabled"]
 
+if "dust_scratch_enabled" in USER_CONFIG:
+    DEFAULT_DUST_SCRATCH_ENABLED = USER_CONFIG["dust_scratch_enabled"]
+
 if "noise_strength" in USER_CONFIG:
     DEFAULT_NOISE_STRENGTH = USER_CONFIG["noise_strength"]
 
@@ -209,6 +222,15 @@ if "edge_amount" in USER_CONFIG:
 
 if "perspective_strength" in USER_CONFIG:
     DEFAULT_PERSPECTIVE_STRENGTH = USER_CONFIG["perspective_strength"]
+
+if "dust_amount" in USER_CONFIG:
+    DEFAULT_DUST_AMOUNT = USER_CONFIG["dust_amount"]
+
+if "scratch_amount" in USER_CONFIG:
+    DEFAULT_SCRATCH_AMOUNT = USER_CONFIG["scratch_amount"]
+
+if "dust_scratch_frequency" in USER_CONFIG:
+    DEFAULT_DUST_SCRATCH_FREQUENCY = USER_CONFIG["dust_scratch_frequency"]
 
 if "random_effects_count" in USER_CONFIG:
     DEFAULT_RANDOM_EFFECTS_COUNT = USER_CONFIG["random_effects_count"]

@@ -224,6 +224,93 @@ class VideoEffects:
         result = np.clip(frame.astype(np.float32) + edge_intensity, 0, 255).astype(np.uint8)
         return result
     
+    def apply_dust_and_scratches(self, frame: np.ndarray, dust_amount: float = 0.2, scratch_amount: float = 0.1, frequency: float = 0.15) -> np.ndarray:
+        """
+        应用模拟胶片蒙尘与划痕效果
+        
+        参数:
+            frame: 输入视频帧
+            dust_amount: 蒙尘量 (0.0-1.0)，推荐范围: 0.1-0.4
+            scratch_amount: 划痕量 (0.0-1.0)，推荐范围: 0.05-0.3
+            frequency: 效果出现频率 (0.0-1.0)，推荐范围: 0.1-0.5
+            
+        返回:
+            处理后的帧
+        """
+        logger.debug(f"应用蒙尘与划痕效果: 蒙尘量={dust_amount:.4f}, 划痕量={scratch_amount:.4f}, 频率={frequency:.4f}")
+        
+        height, width = frame.shape[:2]
+        result = frame.copy()
+        
+        # 根据帧计数和频率决定是否应用效果
+        # 使用随机数和频率参数来确定是否在这一帧上应用效果
+        apply_in_this_frame = random.random() < frequency
+        
+        if not apply_in_this_frame:
+            return result
+        
+        # 创建一个空白蒙版
+        dust_scratch_mask = np.zeros((height, width), dtype=np.uint8)
+        
+        # 添加蒙尘效果（随机小点）
+        dust_count = int(dust_amount * width * height / 500)  # 根据尺寸和密度计算粉尘数量
+        for _ in range(dust_count):
+            dust_x = random.randint(0, width - 1)
+            dust_y = random.randint(0, height - 1)
+            dust_size = random.randint(1, 3)
+            dust_color = random.randint(200, 255)  # 使用较亮的颜色
+            cv2.circle(dust_scratch_mask, (dust_x, dust_y), dust_size, dust_color, -1)
+        
+        # 添加划痕效果（随机线条）
+        scratch_count = int(scratch_amount * 20)  # 控制划痕数量
+        for _ in range(scratch_count):
+            # 随机决定划痕方向（垂直、水平或对角线）
+            scratch_type = random.choice(["vertical", "horizontal", "diagonal"])
+            
+            if scratch_type == "vertical":
+                x = random.randint(0, width - 1)
+                length = random.randint(int(height * 0.05), int(height * 0.3))
+                y_start = random.randint(0, height - length)
+                intensity = random.randint(180, 255)
+                thickness = random.randint(1, 2)
+                cv2.line(dust_scratch_mask, (x, y_start), (x, y_start + length), intensity, thickness)
+            
+            elif scratch_type == "horizontal":
+                y = random.randint(0, height - 1)
+                length = random.randint(int(width * 0.05), int(width * 0.3))
+                x_start = random.randint(0, width - length)
+                intensity = random.randint(180, 255)
+                thickness = random.randint(1, 2)
+                cv2.line(dust_scratch_mask, (x_start, y), (x_start + length, y), intensity, thickness)
+            
+            else:  # diagonal
+                x_start = random.randint(0, width - 1)
+                y_start = random.randint(0, height - 1)
+                # 确保划痕不会超出边界
+                length = random.randint(20, 100)
+                x_end = min(width - 1, x_start + random.randint(-length, length))
+                y_end = min(height - 1, y_start + random.randint(-length, length))
+                intensity = random.randint(180, 255)
+                thickness = random.randint(1, 2)
+                cv2.line(dust_scratch_mask, (x_start, y_start), (x_end, y_end), intensity, thickness)
+        
+        # 对蒙版进行轻微模糊，使效果更自然
+        dust_scratch_mask = cv2.GaussianBlur(dust_scratch_mask, (3, 3), 0)
+        
+        # 根据蒙版生成最终效果
+        # 对于亮色区域（蒙尘和划痕），将原始帧对应位置变亮
+        result_float = frame.astype(np.float32)
+        for c in range(3):  # 处理每个颜色通道
+            # 使用蒙版值调整像素亮度
+            channel = result_float[:, :, c]
+            # 增强蒙版区域的亮度
+            channel += dust_scratch_mask.astype(np.float32) * 0.8
+        
+        # 裁剪到有效范围并转换回uint8
+        result = np.clip(result_float, 0, 255).astype(np.uint8)
+        
+        return result
+    
     def apply_color_space_adjustment(self, frame: np.ndarray) -> np.ndarray:
         """
         对RGB颜色空间进行微小的非线性调整
@@ -353,6 +440,14 @@ class VideoEffects:
             mode = "增强" if strengthen else "减弱"
             applied_effects.append(f"边缘{mode}(量={amount:.3f})")
         
+        # 蒙尘与划痕
+        if effects_config.get('dust_scratch', False):
+            dust_amount = effects_config.get('dust_amount', 0.2)
+            scratch_amount = effects_config.get('scratch_amount', 0.1)
+            frequency = effects_config.get('dust_scratch_frequency', 0.15)
+            processed = self.apply_dust_and_scratches(processed, dust_amount, scratch_amount, frequency)
+            applied_effects.append(f"蒙尘(量={dust_amount:.3f}), 划痕(量={scratch_amount:.3f}), 频率={frequency:.3f}")
+        
         # 色彩调整
         if effects_config.get('color', False):
             processed = self.apply_color_space_adjustment(processed)
@@ -387,7 +482,7 @@ class VideoEffects:
         """
         # 可用效果列表
         effects = ['noise', 'texture', 'distortion', 'brightness', 
-                  'watermark', 'edge', 'color', 'perspective']
+                  'watermark', 'edge', 'color', 'perspective', 'dust_scratch']
         
         # 随机选择指定数量的效果
         selected = random.sample(effects, min(enable_count, len(effects)))
@@ -423,5 +518,11 @@ class VideoEffects:
         if config['perspective']:
             config['perspective_strength'] = random.uniform(0.005, 0.02)
             logger.debug(f"随机透视变换强度: {config['perspective_strength']:.4f}")
+        
+        if config['dust_scratch']:
+            config['dust_amount'] = random.uniform(0.1, 0.4)
+            config['scratch_amount'] = random.uniform(0.05, 0.3)
+            config['dust_scratch_frequency'] = random.uniform(0.1, 0.5)
+            logger.debug(f"随机蒙尘量: {config['dust_amount']:.4f}, 划痕量: {config['scratch_amount']:.4f}, 频率: {config['dust_scratch_frequency']:.4f}")
         
         return config 
